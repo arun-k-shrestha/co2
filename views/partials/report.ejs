@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <style>
+      .charts-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+      }
+
+      .chart-container {
+        flex: 1 1 calc(50% - 40px); 
+        min-width: 300px;
+        max-width: 600px;
+        height: 400px;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+  </head>
+  <body>
+    <% 
+      const limit = parseInt(params.limit) || 5;
+      const xData = linksList.slice(0, limit);
+      const datasets = [
+        { id: 'desktopChartNC', label: 'Desktop Uncached', enabled: params.runDesktopNC, data: desktopEmissionsNC },
+        { id: 'desktopChartC', label: 'Desktop Cached', enabled: params.runDesktopC, data: desktopEmissionsC },
+        { id: 'mobileChartNC', label: 'Mobile Uncached', enabled: params.runMobileNC, data: mobileEmissionsNC },
+        { id: 'mobileChartC', label: 'Mobile Cached', enabled: params.runMobileC, data: mobileEmissionsC }
+      ];
+    %>
+
+    <div class="charts-grid">
+      <% datasets.forEach(ds => {
+        if (ds.enabled) { %>
+          <div class="chart-container">
+            <canvas id="<%= ds.id %>"></canvas>
+          </div>
+      <% }}); %>
+    </div>
+
+    <script>
+      const xValues = JSON.parse('<%- JSON.stringify(xData) %>');
+      const barColors = [
+        "rgba(255, 99, 132, 0.2)", "rgba(255, 159, 64, 0.2)", "rgba(255, 205, 86, 0.2)",
+        "rgba(75, 192, 192, 0.2)", "rgba(54, 162, 235, 0.2)", "rgba(153, 102, 255, 0.2)",
+        "rgba(201, 203, 207, 0.2)", "rgba(255, 99, 71, 0.2)", "rgba(60, 179, 113, 0.2)",
+        "rgba(123, 104, 238, 0.2)"
+      ];
+      const borderColors = barColors.map(c => c.replace("0.2", "1"));
+      
+      <% datasets.forEach(ds => {
+        if (ds.enabled) {
+          const y = ds.data.slice(0, limit);
+      %>
+        new Chart("<%= ds.id %>", {
+          type: "bar",
+          data: {
+            labels: xValues,
+            datasets: [{
+              label: "<%= ds.label %> CO₂",
+              backgroundColor: barColors.slice(0, xValues.length),
+              borderColor: borderColors.slice(0, xValues.length),
+              borderWidth: 2,
+              data:  JSON.parse('<%- JSON.stringify(y) %>')
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            title: {
+              display: true,
+              text: "<%= ds.label %> CO₂ Emissions"
+            },
+            scales: {
+              yAxes: [{
+                ticks: { beginAtZero: true },
+                scaleLabel: {
+                  display: true,
+                  labelString: "grams of CO2"
+                }
+              }]
+            },
+             tooltips: {
+              callbacks: {
+                label: function(tooltipItem, data) {
+                  const datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
+                  const value = tooltipItem.yLabel;
+                  return `${datasetLabel}: ${parseFloat(value).toFixed(3)} g CO₂`;
+                }
+              }
+            }
+          }
+        });
+      <% }}); %>
+    </script>
+  </body>
+</html>
